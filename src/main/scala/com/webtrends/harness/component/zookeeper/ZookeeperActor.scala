@@ -152,7 +152,7 @@ class ZookeeperActor(settings:ZookeeperSettings, clusterEnabled:Boolean=false) e
     // Check if a node exists
     case GetNodeExists(path, optNamespace) => nodeExists(path, optNamespace)
     // Create a node
-    case CreateNode(path, ephemeral, data, optNamespace) => createNode(path, ephemeral, data, optNamespace)
+    case CreateNode(path, createMode, data, optNamespace) => createNode(path, createMode, data, optNamespace)
     // Delete a node
     case DeleteNode(path, optNamespace) => deleteNode(path, optNamespace)
     // query for service names
@@ -274,9 +274,8 @@ class ZookeeperActor(settings:ZookeeperSettings, clusterEnabled:Boolean=false) e
     }
   }
 
-  private def createNode(path: String, ephemeral: Boolean, data: Option[Array[Byte]], namespace: Option[String]) = {
+  private def createNode(path: String, mode: CreateMode, data: Option[Array[Byte]], namespace: Option[String]) = {
     try {
-      val mode = if (ephemeral) CreateMode.EPHEMERAL else CreateMode.PERSISTENT
       sender() ! getClientContext(namespace).create.creatingParentsIfNeeded.withMode(mode).forPath(path, data.getOrElse(Array.empty[Byte]))
     } catch {
       case ne: NodeExistsException => sender() ! path

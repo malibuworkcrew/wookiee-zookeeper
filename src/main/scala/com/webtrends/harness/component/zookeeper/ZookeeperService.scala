@@ -26,6 +26,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.webtrends.harness.component.zookeeper.ZookeeperEvent.Internal.{RegisterZookeeperEvent, UnregisterZookeeperEvent}
 import com.webtrends.harness.component.zookeeper.ZookeeperEvent.ZookeeperEventRegistration
+import org.apache.zookeeper.CreateMode
 
 import scala.concurrent.Future
 
@@ -114,16 +115,29 @@ private[harness] class ZookeeperService()(implicit system: ActorSystem) {
   }
 
   /**
-   * Create a node at the given path
-   * @param path the path to create the node at
-   * @param ephemeral is the node ephemeral
-   * @param data the data to set in the node
-   * @param namespace an optional name space
-   * @return the full path to the newly created node or an empty string if an error occurred
-   */
+    * Create a node at the given path
+    * @param path the path to create the node at
+    * @param createMode mode in which to create the node
+    * @param data the data to set in the node
+    * @param namespace an optional name space
+    * @return the full path to the newly created node or an empty string if an error occurred
+    */
+  def createNodeWithMode(path: String, createMode: CreateMode, data: Option[Array[Byte]], namespace: Option[String] = None)
+                        (implicit timeout: akka.util.Timeout = defaultTimeout): Future[String] = {
+    (mediator.get ? CreateNode(path, createMode, data, namespace)).mapTo[String]
+  }
+
+  /**
+    * Create a node at the given path
+    * @param path the path to create the node at
+    * @param ephemeral is the node ephemeral or persistent?
+    * @param data the data to set in the node
+    * @param namespace an optional name space
+    * @return the full path to the newly created node or an empty string if an error occurred
+    */
   def createNode(path: String, ephemeral: Boolean, data: Option[Array[Byte]], namespace: Option[String] = None)
                 (implicit timeout: akka.util.Timeout = defaultTimeout): Future[String] = {
-    (mediator.get ? CreateNode(path, ephemeral, data, namespace)).mapTo[String]
+    createNodeWithMode(path, if (ephemeral) CreateMode.EPHEMERAL else CreateMode.PERSISTENT, data, namespace)
   }
 
   /**
@@ -173,7 +187,7 @@ object ZookeeperService {
 
   @SerialVersionUID(1L) private[harness] case class GetPathChildren(path: String, includeData: Boolean, namespace: Option[String] = None)
 
-  @SerialVersionUID(1L) private[harness] case class CreateNode(path: String, ephemeral: Boolean, data: Option[Array[Byte]], namespace: Option[String] = None)
+  @SerialVersionUID(1L) private[harness] case class CreateNode(path: String, createMode: CreateMode, data: Option[Array[Byte]], namespace: Option[String] = None)
 
   @SerialVersionUID(1L) private[harness] case class GetNodeExists(path: String, namespace: Option[String] = None)
 
